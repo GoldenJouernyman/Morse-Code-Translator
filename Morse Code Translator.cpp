@@ -3,7 +3,21 @@
 #include <string>
 #include <locale>
 #include <conio.h>
+#include <chrono>
+#include <thread>
 #include <stdio.h>
+
+HANDLE hConsole;
+
+enum ColorConsole {
+    White = 15,
+    Blue = 3,
+    Red = 12,
+    Green = 10,
+    BlueWhite = 11,
+    brightRed = 4,
+    Yellow = 14
+};
 
 std::string originalLine = "";
 bool flag = false;
@@ -357,23 +371,60 @@ static void Playback(std::string str) {
     }
 }
 
-enum ColorConsole {
-    White = 15,
-    Blue = 3,
-    Red = 12
-};
+static int TransferOutputSpeed() {
+    char choiceSpeed;
+    int speed = 0;
+    bool SelectionFlag;
+    do {
+        SelectionFlag = false;
+        std::cout << "Select the speed at which the result is displayed on the screen:\n\n";
+        SetConsoleTextAttribute(hConsole, Green);
+        std::cout << "1 - Slowly\n";
+        SetConsoleTextAttribute(hConsole, Yellow);
+        std::cout << "2 - Normally\n";
+        SetConsoleTextAttribute(hConsole, BlueWhite);
+        std::cout << "3 - Swiftly\n";
+        SetConsoleTextAttribute(hConsole, brightRed);
+        std::cout << "4 - Momentary\n\n";
+        SetConsoleTextAttribute(hConsole, White);
+        choiceSpeed = _getch();
 
-HANDLE hConsole;
+        system("cls");
+
+        if (choiceSpeed == '1') {
+            speed = 70000;
+        }
+        else if (choiceSpeed == '2') {
+            speed = 30000;
+        }
+        else if (choiceSpeed == '3') {
+            speed = 15000;
+        }
+        else if (choiceSpeed == '4') {
+            speed = 0;
+        }
+        else {
+            SetConsoleTextAttribute(hConsole, Red);
+            std::cout << "Unknown character, try again!\n";
+            SetConsoleTextAttribute(hConsole, White);
+            SelectionFlag = true;
+        }
+    } while (SelectionFlag);
+    return speed;
+}
 
 int main() {
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
-    int choice = 0;
+    int speed = 0;
+    int numberTimes = 0;
+    char choice;
     char separation;
     char end;
     bool choiceBool;
-    bool enteredCharacter;
+    bool enteredCharacter = true;
+    bool emptyLine = true;
     std::string text;
 
     SetConsoleTextAttribute(hConsole, Blue);
@@ -381,14 +432,21 @@ int main() {
     SetConsoleTextAttribute(hConsole, White);
 
     do {
-        std::cout << "Enter the text in Morse code or in Russian: \n\n";
-        if (flag) {
-            std::cin.ignore(1);
-            flag = false;
-        }
-        getline(std::cin, text);
+        
+        do {
+            std::cout << "Enter the text in Morse code or in Russian: \n\n";
+            if (flag) {
+                std::cin.ignore(1);
+                flag = false;
+            }
+            getline(std::cin, text);
 
-        system("cls");
+            if (text.length() > 0)
+                emptyLine = false;
+            
+            system("cls");
+            
+        } while (emptyLine);
 
         do {
             separation = 32;
@@ -401,6 +459,7 @@ int main() {
             system("cls");
 
             if (choice == '1') {
+                speed = TransferOutputSpeed();
                 if (CountWords(text) > 1) {
                     flag = true;
                     std::cout << "Which character should be used to separate words? \n\n";
@@ -410,6 +469,7 @@ int main() {
                 choice1(text, separation);
             }
             else if (choice == '2') {
+                speed = TransferOutputSpeed();
                 choice2(text);
             }
             else {
@@ -421,8 +481,13 @@ int main() {
         } while (choiceBool);
 
         do {
-            enteredCharacter = true;
-            std::cout << originalLine;
+            if (numberTimes > 0) speed = 0;
+
+            for (int i = 0; i < originalLine.length(); i++) {
+                std::cout << originalLine[i];
+                std::this_thread::sleep_for(std::chrono::microseconds(speed));
+            }
+
             if (choice == '1') {
                 std::cout << "\n\nEnter \"r\" (resume) to continue, \"s\" (stop) to end the work, or \"p\" (playback) to play\n\n";
             }
@@ -433,10 +498,10 @@ int main() {
 
             system("cls");
 
-            if (end == 'p') {
+            if (end == 'p' || end == 'з') {
                 Playback(originalLine);
             }
-            else if (end == 'r' || end == 's') {
+            else if (end == 'r' || end == 'к' || end == 's' || end == 'ы') {
                 enteredCharacter = false;
             }
             else {
@@ -444,16 +509,20 @@ int main() {
                 std::cout << "Unknown character, try again!\n";
                 SetConsoleTextAttribute(hConsole, White);
             }
+            if (numberTimes == 0) numberTimes++;
         } while (enteredCharacter);
 
         originalLine = "";
+        numberTimes = 0;
 
         system("cls");
-    } while (end == 'r');
+    } while (end == 'r' || end == 'к');
 
     SetConsoleTextAttribute(hConsole, Blue);
-    std::cout << "Goodbye, come back again :)\n";
+    std::cout << "Goodbye, come back again :)\n\n";
     SetConsoleTextAttribute(hConsole, White);
+
+    system("Pause");
 
     return 0;
 }
